@@ -1,11 +1,1 @@
-const grid=document.querySelector('#coursesGrid'); const search=document.querySelector('#search');
-document.querySelector('#year').textContent=new Date().getFullYear();
-let data=[];
-async function load(){const r=await fetch('/api/courses'); data=await r.json(); render(data)}
-function render(items){grid.innerHTML=items.map(c=>`<article class="card"><h3>${esc(c.title)}</h3><p>${esc(c.description||'')}</p>
-<div>${c.lectures.map(l=>`<div class="lecture"><b>${esc(l.title)}</b><p>${esc(l.description||'')}</p>
-${l.video_path?`<video controls preload="metadata" src="${l.video_path}"></video>`:''}
-${l.file_path?`<a class="btn" href="${l.file_path}" target="_blank">فتح الملف المرفق</a>`:''}</div>`).join('')}</div></article>`).join('')||'<p>لا توجد دورات مضافة بعد.</p>'}
-search.addEventListener('input',()=>{const q=search.value.toLowerCase();render(data.map(c=>({...c,lectures:c.lectures.filter(l=>(c.title+' '+c.description+' '+l.title+' '+l.description).toLowerCase().includes(q))})).filter(c=>c.title.toLowerCase().includes(q)||c.lectures.length)});
-function esc(x){return String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
-load();
+const grid=document.querySelector("#coursesGrid"),search=document.querySelector("#search");document.querySelector("#year").textContent=new Date().getFullYear();let data=[];const esc=x=>String(x??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));async function load(){data=await fetch("/api/courses").then(r=>r.json());render(data)}function render(cs){grid.innerHTML=cs.length?cs.map(c=>`<article class="course"><div class="tag">${esc(c.category||"تعليم")}</div><h3>${esc(c.title)}</h3><p>${esc(c.description||"")}</p>${c.lectures.map(l=>`<div class="lecture"><strong>${esc(l.title)}</strong>${l.video_path?`<video controls src="${l.video_path}"></video>`:""}${l.file_path?`<a href="${l.file_path}" target="_blank">📄 فتح الملف</a>`:""}</div>`).join("")}</article>`).join(""):"<div class='empty'>لا توجد دورات مضافة بعد.</div>"}search.oninput=()=>{let q=search.value.toLowerCase();render(data.filter(c=>(c.title+" "+c.description+" "+c.category).toLowerCase().includes(q)))};load();
