@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>لوحة إدارة المنصة</title><link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="topbar"><div class="brand">لوحة إدارة منصة الأستاذ طه الحسن</div><nav><a href="/">عرض المنصة</a></nav></header>
+<main class="admin">
+<div id="loginBox" class="panel">
+<h2>دخول المدير</h2>
+<form id="loginForm"><input id="email" type="email" placeholder="البريد الإلكتروني" required>
+<input id="password" type="password" placeholder="كلمة المرور" required><button class="btn">دخول</button></form>
+<p id="loginMsg" class="msg"></p></div>
+
+<div id="dashboard" hidden>
+<div class="stats" id="stats"></div>
+<div class="panel"><div class="panel-head"><h2>إضافة دورة</h2></div>
+<form id="courseForm" class="form-grid"><input id="courseTitle" placeholder="اسم الدورة" required>
+<textarea id="courseDesc" placeholder="وصف الدورة"></textarea><button class="btn">إضافة</button></form></div>
+
+<div class="panel"><div class="panel-head"><h2>إضافة محاضرة</h2></div>
+<form id="lectureForm" enctype="multipart/form-data" class="form-grid">
+<select id="courseId" required></select><input name="title" placeholder="عنوان المحاضرة" required>
+<textarea name="description" placeholder="وصف المحاضرة"></textarea>
+<label>فيديو <input name="video" type="file" accept="video/*"></label>
+<label>ملف مرفق <input name="file" type="file"></label>
+<button class="btn">رفع المحاضرة</button></form><p id="uploadMsg" class="msg"></p></div>
+
+<div class="panel"><h2>المحتوى الحالي</h2><div id="adminCourses"></div></div>
+<button id="logout" class="btn danger">تسجيل الخروج</button>
+</div>
+</main>
+<script src="/admin.js"></script>
+</body></html>
