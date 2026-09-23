@@ -2,9 +2,10 @@ const express=require("express"),session=require("express-session"),bcrypt=requi
 const app=express(),PORT=process.env.PORT||3000;for(const d of ["data","uploads"])fs.mkdirSync(path.join(__dirname,d),{recursive:true});
 const db=new Database(path.join(__dirname,"data/platform.db"));db.pragma("foreign_keys=ON");db.exec(`CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT,email TEXT UNIQUE,password TEXT,role TEXT DEFAULT 'student');CREATE TABLE IF NOT EXISTS courses(id INTEGER PRIMARY KEY AUTOINCREMENT,title TEXT,description TEXT,category TEXT,created_at TEXT DEFAULT CURRENT_TIMESTAMP);CREATE TABLE IF NOT EXISTS lectures(id INTEGER PRIMARY KEY AUTOINCREMENT,course_id INTEGER,title TEXT,description TEXT,video_path TEXT,file_path TEXT,sort_order INTEGER DEFAULT 0,created_at TEXT DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY(course_id) REFERENCES courses(id) ON DELETE CASCADE);`);
 if(!db.prepare("SELECT id FROM users WHERE email=?").get("admin@taha-platform.local"))db.prepare("INSERT INTO users(name,email,password,role) VALUES(?,?,?,?)").run("مدير المنصة","admin@taha-platform.local",bcrypt.hashSync("ChangeMe123!",10),"admin");
-app.use(express.json());app.use(express.urlencoded({extended:true}));app.use(session({secret:process.env.SECRET_SESSION||"change-me",resave:false,saveUninitialized:false,cookie:{httpOnly:true,sameSite:"lax"}}));app.use(express.static(path.join(__dirname,"public")));app.use("/uploads",express.static(path.join(__dirname,"uploads")));
+app.use(express.json());app.use(express.urlencoded({extended:true}));app.set("trust proxy", 1);app.use(session({secret:process.env.SECRET_SESSION||"change-me",resave:false,saveUninitialized:false,cookie:{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production"}}));app.use(express.static(path.join(__dirname,"public")));app.use("/uploads",express.static(path.join(__dirname,"uploads")));
 const storage=multer.diskStorage({destination:(r,f,c)=>c(null,path.join(__dirname,"uploads")),filename:(r,f,c)=>c(null,Date.now()+"-"+f.originalname.replace(/[^a-zA-Z0-9._-]/g,"_"))});const upload=multer({storage,limits:{fileSize:1024*1024*1024}});
 const admin=(r,s,n)=>r.session.user?.role==="admin"?n():s.status(403).json({error:"صلاحية المدير مطلوبة"});
+app.get("/health",(r,s)=>s.json({ok:true,service:"taha-alhassan-platform"}));
 app.get("/api/courses",(r,s)=>{let c=db.prepare("SELECT * FROM courses ORDER BY id DESC").all(),l=db.prepare("SELECT * FROM lectures ORDER BY sort_order,id").all();s.json(c.map(x=>({...x,lectures:l.filter(y=>y.course_id===x.id)})))});
 app.get("/api/me",(r,s)=>r.session.user?s.json(r.session.user):s.status(401).json({error:"غير مسجل"}));
 app.post("/api/login",(r,s)=>{let u=db.prepare("SELECT * FROM users WHERE email=?").get(r.body.email||"");if(!u||!bcrypt.compareSync(r.body.password||"",u.password))return s.status(401).json({error:"بيانات الدخول غير صحيحة"});r.session.user={id:u.id,name:u.name,email:u.email,role:u.role};s.json(r.session.user)});
@@ -12,4 +13,10 @@ app.post("/api/logout",(r,s)=>r.session.destroy(()=>s.json({ok:true})));
 app.post("/api/courses",admin,(r,s)=>{let x=db.prepare("INSERT INTO courses(title,description,category) VALUES(?,?,?)").run(r.body.title,r.body.description||"",r.body.category||"عام");s.json({id:x.lastInsertRowid})});
 app.post("/api/lectures",admin,upload.fields([{name:"video",maxCount:1},{name:"file",maxCount:1}]),(r,s)=>{let v=r.files?.video?.[0]?.filename,f=r.files?.file?.[0]?.filename,x=db.prepare("INSERT INTO lectures(course_id,title,description,video_path,file_path,sort_order) VALUES(?,?,?,?,?,?)").run(r.body.courseId,r.body.title,r.body.description||"",v?"/uploads/"+v:null,f?"/uploads/"+f:null,Number(r.body.sort_order||0));s.json({id:x.lastInsertRowid})});
 app.get("/api/admin/data",admin,(r,s)=>{let c=db.prepare("SELECT * FROM courses ORDER BY id DESC").all(),l=db.prepare("SELECT * FROM lectures").all(),u=db.prepare("SELECT COUNT(*) n FROM users WHERE role='student'").get().n;s.json({courses:c.map(x=>({...x,lectures:l.filter(y=>y.course_id===x.id)})),stats:{courses:c.length,lectures:l.length,students:u}})});
-app.listen(PORT,()=>console.log("Taha Alhassan Platform running on "+PORT));
+const server=app.listen(PORT,()=>console.log("Taha Alhassan Platform running on "+PORT));
+const shutdown=()=>{
+  try{db.close();}catch(e){}
+  server.close(()=>process.exit(0));
+};
+process.on("SIGTERM",shutdown);
+process.on("SIGINT",shutdown);
